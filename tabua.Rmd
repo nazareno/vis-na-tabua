@@ -1,0 +1,79 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r warning=FALSE}
+library(tidyverse)
+library(lubridate)
+library(rvest)
+library(stringr)
+#devtools::install_github("juliasilge/silgelib")
+library(silgelib)
+#install.packages("viridis")
+library(viridis)
+theme_set(theme_roboto())
+# These fonts must be installed locally on your computer for this theme to work: https://fonts.google.com/specimen/Roboto+Condensed and https://fonts.google.com/specimen/Roboto. 
+```
+
+
+```{r obter_dado}
+mes = "Jan"
+ano = 2018
+local = 30540
+
+url = sprintf("https://www.mar.mil.br/dhn/chm/box-previsao-mare/tabuas/30540%s%s.htm", mes, ano)
+
+html_bruto = read_html(url)
+
+mares_nt = html_bruto %>%  
+    html_node("table") %>% 
+    html_table(header = TRUE) %>% 
+    select(-Lua) %>%  
+    filter(!is.na(`Alt.(m)`))
+
+mares = mares_nt %>% 
+    mutate(Dia = ifelse(Dia == "", NA,   substr(Dia, 4, 15))) %>% 
+    fill(Dia) %>% 
+    transmute(Horario = dmy_hm(paste(Dia, Hora)), Maré = `Alt.(m)`)
+```
+
+
+```{r vis}
+mares %>% 
+    group_by(Dia = day(`Horario`)) %>% 
+    summarise(Mínima = min(`Maré`), Máxima = max(`Maré`)) %>% 
+    ggplot(aes(x = Dia, ymin = `Mínima`, ymax = `Máxima`)) + 
+    geom_ribbon(fill = "#FFA69E", color = "#462255", alpha = .8) + 
+    geom_vline(aes(xintercept = day(now())), size = 3, alpha = .5, color = "#462255") + 
+    annotate("text", x = day(now()), y = -.5, label = "Hoje", hjust = -.2 ) +
+    labs(title = "Máxima e mínima por dia", 
+         subtitle = "maré mais alta e mais baixa para cada dia do mês", 
+         y = "Marés no dia", 
+         x = "Dia do mês")
+ggsave("mares-por-dia.png", width = 8, height = 5)
+```
+
+```{r}
+praia = tibble(Hora = c(8, 18), 
+               `Maré_min` = min(mares$Maré), 
+               `Maré_max` = max(mares$Maré))
+    
+mares %>% 
+    mutate(Dia = day(Horario), Hora = hour(Horario)) %>% 
+    ggplot() + 
+    geom_ribbon(data = praia, aes(x = Hora, 
+                                  ymin = `Maré_min`, 
+                                  ymax = `Maré_max`), 
+                fill = "yellow", 
+                alpha = .5) +
+    geom_area(aes(x = Hora, y = `Maré`), fill = "#93E1D8", color = "darkblue", alpha = .8) +
+    facet_wrap(~ Dia) +
+    labs(title = "Maré por horário", 
+         subtitle = "e por dia. o amarelo destaca das 8 às 18", 
+         y = "Maré", 
+         x = "Hora")
+
+ggsave("mares-por-hora.png", width = 8, height = 7)
+```
+
