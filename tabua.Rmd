@@ -22,7 +22,7 @@ mes = "Jan"
 ano = 2018
 local = 30540
 
-url = sprintf("https://www.mar.mil.br/dhn/chm/box-previsao-mare/tabuas/30540%s%s.htm", mes, ano)
+url = sprintf("https://www.mar.mil.br/dhn/chm/box-previsao-mare/tabuas/%s%s%s.htm", local, mes, ano)
 
 html_bruto = read_html(url)
 
@@ -33,7 +33,7 @@ mares_nt = html_bruto %>%
     filter(!is.na(`Alt.(m)`))
 
 mares = mares_nt %>% 
-    mutate(Dia = ifelse(Dia == "", NA,   substr(Dia, 4, 15))) %>% 
+    mutate(Dia = ifelse(Dia == "", NA,   substr(Dia, 4, 17))) %>% 
     fill(Dia) %>% 
     transmute(Horario = dmy_hm(paste(Dia, Hora)), Maré = `Alt.(m)`)
 ```
@@ -55,7 +55,7 @@ ggsave("mares-por-dia.png", width = 8, height = 5)
 ```
 
 ```{r}
-praia = tibble(Hora = c(8, 18), 
+praia = tibble(Hora = c(10, 16), 
                `Maré_min` = min(mares$Maré), 
                `Maré_max` = max(mares$Maré))
     
@@ -69,11 +69,11 @@ mares %>%
                 alpha = .5) +
     geom_area(aes(x = Hora, y = `Maré`), fill = "#93E1D8", color = "darkblue", alpha = .8) +
     facet_wrap(~ Dia) +
-    labs(title = "Maré por horário", 
-         subtitle = "e por dia. o amarelo destaca das 8 às 18", 
-         y = "Maré", 
+    labs(title = "Maré por horário durante os dias:", 
+         subtitle = "O amarelo destaca o horário com maior incidência de raios ultravioleta (evite-o).", 
+         y = "Maré (em metros)", 
          x = "Hora")
 
-ggsave("mares-por-hora.png", width = 8, height = 7)
+ggsave("mares-por-hora.png", width = 14, height = 7)
 ```
 
