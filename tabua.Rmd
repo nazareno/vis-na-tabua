@@ -20,9 +20,9 @@ theme_set(theme_roboto())
 ```{r obter_dado}
 mes = "Jan"
 ano = 2018
-local = 30540
+local = 30540 #30540: PORTO DE CABEDELO (PARAÍBA) Jan/2007
 
-url = sprintf("https://www.mar.mil.br/dhn/chm/box-previsao-mare/tabuas/30540%s%s.htm", mes, ano)
+url = sprintf("https://www.mar.mil.br/dhn/chm/box-previsao-mare/tabuas/%s%s%s.htm", local, mes, ano)
 
 html_bruto = read_html(url)
 
@@ -32,8 +32,9 @@ mares_nt = html_bruto %>%
     select(-Lua) %>%  
     filter(!is.na(`Alt.(m)`))
 
+tamanho_data = ifelse(ano < 2010, 15, 17)
 mares = mares_nt %>% 
-    mutate(Dia = ifelse(Dia == "", NA,   substr(Dia, 4, 15))) %>% 
+    mutate(Dia = ifelse(Dia == "", NA,   substr(Dia, 4, tamanho_data))) %>% 
     fill(Dia) %>% 
     transmute(Horario = dmy_hm(paste(Dia, Hora)), Maré = `Alt.(m)`)
 ```
